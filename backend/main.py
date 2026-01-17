@@ -18,4 +18,4 @@ app.add_middleware(
 
 @app.get("/")
 def read_root():
-    return {"message": "Bienvenu"}
+    return {"message": "Titre renvoyé par le backend"}
