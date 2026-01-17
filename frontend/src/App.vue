@@ -5,6 +5,8 @@ import {ref, onMounted } from 'vue';
 
 const API_URL = import.meta.env.VITE_API_URL
 
+console.log(API_URL)
+
 async function getMessage() {
   const res = await fetch(`${API_URL}/`)
   const response = await res.json()
