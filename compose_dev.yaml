@@ -1,0 +1,25 @@
+services:
+  backend:
+    build: 
+      context: ./
+      target: backend_dev
+    ports:
+      - 127.0.0.1:3000:3000
+    
+    develop:
+      watch:
+        - action: sync
+          path: ./backend/
+          target: /backend/.
+
+  frontend:
+    build:
+      context: ./
+      target: frontend_dev
+    ports: 
+      - 127.0.0.1:7958:7958
+    develop:
+      watch:
+        - action: sync
+          path: ./frontend/
+          target: /frontend/.
