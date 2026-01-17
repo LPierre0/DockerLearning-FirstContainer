@@ -37,9 +37,15 @@ COPY frontend/ ./
 RUN npm install
 RUN npm run build  
 
+# ... (le début du fichier reste identique)
+
 # ==========================================
 # 🚀 FRONTEND : PRODUCTION (NGINX)
 # ==========================================
 FROM nginx:alpine as frontend_prod
+
+COPY nginx.conf /etc/nginx/nginx.conf
+
 COPY --from=frontend_build /frontend/dist /usr/share/nginx/html
+
 EXPOSE 80
