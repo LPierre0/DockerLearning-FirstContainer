@@ -52,7 +52,65 @@ SKILLS = [
 ]
 
 # ═══════════════════════════════════════════════════════════════
-# 🖥️ TERMINAL COMMANDS SIMULATION
+# � BLOG & PROJECTS
+# ═══════════════════════════════════════════════════════════════
+
+BLOG_POSTS = [
+    {
+        "id": 1,
+        "title": "Optimizing Docker Images for Python",
+        "date": "2024-03-15",
+        "category": "DevOps",
+        "summary": "How to reduce your container size from 1GB to 150MB using multi-stage builds and Alpine/Slim variants.",
+        "content": "Full content would go here...",
+        "read_time": "5 min"
+    },
+    {
+        "id": 2,
+        "title": "Understanding Attention Mechanisms",
+        "date": "2024-02-28",
+        "category": "Deep Learning",
+        "summary": "A visual guide to how Transformers process sequences, from Self-Attention to Multi-Head Attention.",
+        "content": "...",
+        "read_time": "12 min"
+    },
+    {
+        "id": 3,
+        "title": "FastAPI + Vue 3: The Modern Stack",
+        "date": "2024-01-10",
+        "category": "Web Dev",
+        "summary": "Why I chose FastAPI for backend performance and Vue 3 Composition API for frontend reactivity.",
+        "content": "...",
+        "read_time": "8 min"
+    }
+]
+
+PROJECTS = [
+    {
+        "id": 101,
+        "name": "Live Stock Predictor",
+        "stack": ["Python", "TensorFlow", "Kafka"],
+        "status": "Production",
+        "description": "Real-time stock market prediction engine using LSTM networks processing 50k events/sec."
+    },
+    {
+        "id": 102,
+        "name": "Auto-ML Orchestrator",
+        "stack": ["Kubernetes", "Airflow", "Docker"],
+        "status": "Beta",
+        "description": "Self-healing pipeline that automatically retrains models when data drift is detected."
+    },
+    {
+        "id": 103,
+        "name": "EcoVision",
+        "stack": ["PyTorch", "Raspberry Pi", "OpenCV"],
+        "status": "Completed",
+        "description": "IoT device for detecting plastic waste in rivers using computer vision at the edge."
+    }
+]
+
+# ═══════════════════════════════════════════════════════════════
+# �🖥️ TERMINAL COMMANDS SIMULATION
 # ═══════════════════════════════════════════════════════════════
 
 TERMINAL_RESPONSES = {
@@ -207,12 +265,14 @@ async def generate_metrics_stream():
         await asyncio.sleep(0.5)
 
 async def generate_ml_stream():
-    total_epochs = 100
-    for epoch in range(1, total_epochs + 1):
-        metrics = MLSimulator.generate_training_metrics(epoch, total_epochs)
-        yield f"data: {json.dumps(metrics)}\n\n"
-        await asyncio.sleep(0.15)
-    yield f"data: {json.dumps({'status': 'completed', 'message': 'Training finished!'})}\n\n"
+    while True:
+        total_epochs = 100
+        for epoch in range(1, total_epochs + 1):
+            metrics = MLSimulator.generate_training_metrics(epoch, total_epochs)
+            yield f"data: {json.dumps(metrics)}\n\n"
+            await asyncio.sleep(0.15)
+        yield f"data: {json.dumps({'status': 'completed', 'message': 'Training sequence finished. Restarting...'})}\n\n"
+        await asyncio.sleep(2)
 
 async def generate_prediction_stream():
     x = 0
@@ -225,29 +285,31 @@ async def generate_prediction_stream():
         await asyncio.sleep(0.1)
 
 async def generate_pipeline_stream():
-    run_id = f"run_{random.randint(1000, 9999)}"
-    total_rows = random.randint(50000, 200000)
-    
-    yield f"data: {json.dumps({'type': 'start', 'run_id': run_id, 'total_rows': total_rows})}\n\n"
-    
-    for stage in PIPELINE_STAGES:
-        log = PipelineSimulator.generate_log(stage["id"], "running", f"Starting {stage['name']}...")
-        yield f"data: {json.dumps({'type': 'log', **log})}\n\n"
-        await asyncio.sleep(0.2)
+    while True:
+        run_id = f"run_{random.randint(1000, 9999)}"
+        total_rows = random.randint(50000, 200000)
         
-        duration = random.uniform(*stage["duration"])
-        steps = int(duration / 0.1)
-        for i in range(steps):
-            progress = (i + 1) / steps * 100
-            metrics = PipelineSimulator.generate_metrics()
-            yield f"data: {json.dumps({'type': 'progress', 'stage': stage['id'], 'progress': round(progress, 1), 'metrics': metrics})}\n\n"
+        yield f"data: {json.dumps({'type': 'start', 'run_id': run_id, 'total_rows': total_rows})}\n\n"
+        
+        for stage in PIPELINE_STAGES:
+            log = PipelineSimulator.generate_log(stage["id"], "running", f"Starting {stage['name']}...")
+            yield f"data: {json.dumps({'type': 'log', **log})}\n\n"
+            await asyncio.sleep(0.2)
+            
+            duration = random.uniform(*stage["duration"])
+            steps = int(duration / 0.1)
+            for i in range(steps):
+                progress = (i + 1) / steps * 100
+                metrics = PipelineSimulator.generate_metrics()
+                yield f"data: {json.dumps({'type': 'progress', 'stage': stage['id'], 'progress': round(progress, 1), 'metrics': metrics})}\n\n"
+                await asyncio.sleep(0.1)
+            
+            log = PipelineSimulator.generate_log(stage["id"], "completed", f"{stage['name']} completed successfully")
+            yield f"data: {json.dumps({'type': 'log', **log})}\n\n"
             await asyncio.sleep(0.1)
         
-        log = PipelineSimulator.generate_log(stage["id"], "completed", f"{stage['name']} completed successfully")
-        yield f"data: {json.dumps({'type': 'log', **log})}\n\n"
-        await asyncio.sleep(0.1)
-    
-    yield f"data: {json.dumps({'type': 'complete', 'run_id': run_id, 'status': 'success', 'message': 'Pipeline completed successfully!'})}\n\n"
+        yield f"data: {json.dumps({'type': 'complete', 'run_id': run_id, 'status': 'success', 'message': 'Pipeline completed successfully!'})}\n\n"
+        await asyncio.sleep(3)
 
 async def generate_matrix_stream():
     """Stream Matrix-style characters"""
@@ -322,6 +384,18 @@ def get_profile():
 @app.get("/skills")
 def get_skills():
     return SKILLS
+
+@app.get("/pipeline")
+def get_pipeline_info():
+    return {"stages": PIPELINE_STAGES}
+
+@app.get("/blog")
+def get_blog_posts():
+    return BLOG_POSTS
+
+@app.get("/projects")
+def get_projects():
+    return PROJECTS
 
 @app.get("/terminal/{command}")
 def execute_terminal(command: str):
