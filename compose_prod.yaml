@@ -1,14 +1,19 @@
 services:
   backend:
-    build: 
+    build:
       context: ./
       target: backend_prod
     ports:
       - 3000:3000
-    
+    volumes:
+      - sqlite_data:/backend/data
+
   frontend:
     build:
       context: ./
       target: frontend_prod
-    ports: 
+    ports:
       - 80:80
+
+volumes:
+  sqlite_data:

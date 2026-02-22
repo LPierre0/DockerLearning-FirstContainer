@@ -1,11 +1,12 @@
 services:
   backend:
-    build: 
+    build:
       context: ./
       target: backend_dev
     ports:
       - 127.0.0.1:3000:3000
-    
+    volumes:
+      - sqlite_data:/backend/data
     develop:
       watch:
         - action: sync
@@ -16,10 +17,13 @@ services:
     build:
       context: ./
       target: frontend_dev
-    ports: 
+    ports:
       - 127.0.0.1:7958:7958
     develop:
       watch:
         - action: sync
           path: ./frontend/
           target: /frontend/.
+
+volumes:
+  sqlite_data:
