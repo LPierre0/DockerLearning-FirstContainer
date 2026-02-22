@@ -15,12 +15,16 @@
 
     <!-- Mobile bottom nav -->
     <BottomNav class="lg:hidden" />
+
+    <!-- Active workout persistent banner -->
+    <ActiveWorkoutBanner />
   </div>
 </template>
 
 <script setup>
 import TopNav from './TopNav.vue'
 import BottomNav from './BottomNav.vue'
+import ActiveWorkoutBanner from './ActiveWorkoutBanner.vue'
 
 defineProps({
   fullWidth: { type: Boolean, default: false },

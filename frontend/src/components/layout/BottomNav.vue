@@ -23,14 +23,19 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useProfileStore } from '@/stores/profileStore'
+import { useWorkoutStore } from '@/stores/workoutStore'
 import AppIcon from '@/components/ui/AppIcon.vue'
 
 const route = useRoute()
 const profileStore = useProfileStore()
+const workoutStore = useWorkoutStore()
 
 const navItems = computed(() => {
+  const seanceTo = workoutStore.activeWorkoutId
+    ? `/workout/active/${workoutStore.activeWorkoutId}`
+    : '/workout/new'
   const items = [
-    { to: '/workout/new', icon: 'bolt',      label: 'Séance' },
+    { to: seanceTo,       icon: 'bolt',      label: 'Séance' },
     { to: '/history',     icon: 'clock',     label: 'Historique' },
     { to: '/progress',    icon: 'chart-bar', label: 'Progression' },
     { to: '/profile',     icon: 'scale',     label: 'Poids' },
@@ -43,7 +48,7 @@ const navItems = computed(() => {
 })
 
 function isActive(path) {
-  if (path === '/workout/new') {
+  if (path.startsWith('/workout')) {
     return route.path.startsWith('/workout')
   }
   return route.path.startsWith(path)
