@@ -35,6 +35,7 @@ class ExerciseOut(BaseModel):
     is_custom: bool
     created_by: Optional[int]
     photo_url: Optional[str] = None
+    usage_count: int = 0
 
     model_config = {"from_attributes": True}
 

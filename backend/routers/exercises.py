@@ -3,10 +3,11 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Exercise, User
+from models import Exercise, User, Workout, WorkoutSet
 from schemas import ExerciseCreate, ExerciseOut
 
 router = APIRouter(prefix="/exercises", tags=["exercises"])
@@ -35,7 +36,13 @@ def exercise_photo_url(exercise_id: int, photo_filename: str | None) -> str | No
     return f"/api/exercises/{exercise_id}/photo"
 
 
-def exercise_to_out(exercise: Exercise) -> ExerciseOut:
+def exercise_to_out(
+    exercise: Exercise,
+    usage_count_by_exercise: dict[int, int] | None = None,
+) -> ExerciseOut:
+    usage_count = 0
+    if usage_count_by_exercise is not None:
+        usage_count = usage_count_by_exercise.get(exercise.id, 0)
     return ExerciseOut(
         id=exercise.id,
         name=exercise.name,
@@ -43,6 +50,7 @@ def exercise_to_out(exercise: Exercise) -> ExerciseOut:
         is_custom=exercise.is_custom,
         created_by=exercise.created_by,
         photo_url=exercise_photo_url(exercise.id, exercise.photo_filename),
+        usage_count=usage_count,
     )
 
 
@@ -73,15 +81,27 @@ def _delete_photo_file(filename: str | None):
         file_path.unlink()
 
 
+def _usage_count_by_exercise(db: Session, user_id: int) -> dict[int, int]:
+    rows = (
+        db.query(WorkoutSet.exercise_id, func.count(WorkoutSet.id))
+        .join(Workout, WorkoutSet.workout_id == Workout.id)
+        .filter(Workout.user_id == user_id)
+        .group_by(WorkoutSet.exercise_id)
+        .all()
+    )
+    return {exercise_id: count for exercise_id, count in rows}
+
+
 @router.get("", response_model=list[ExerciseOut])
 def get_exercises(user_id: int | None = None, db: Session = Depends(get_db)):
     query = db.query(Exercise).filter(Exercise.is_custom == False)
     if user_id:
+        usage_map = _usage_count_by_exercise(db, user_id)
         custom = db.query(Exercise).filter(
             Exercise.is_custom == True,
             Exercise.created_by == user_id,
         )
-        return [exercise_to_out(e) for e in query.all() + custom.all()]
+        return [exercise_to_out(e, usage_map) for e in query.all() + custom.all()]
     return [exercise_to_out(e) for e in query.all()]
 
 

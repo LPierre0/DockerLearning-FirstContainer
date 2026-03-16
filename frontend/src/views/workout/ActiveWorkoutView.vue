@@ -35,7 +35,7 @@
       </div>
 
       <!-- Exercise sets -->
-      <div class="flex-1 overflow-y-auto p-4 space-y-4 pb-32">
+      <div ref="exerciseListEl" class="flex-1 overflow-y-auto overscroll-contain p-4 space-y-4 pb-32">
         <SetLogger
           v-for="group in exerciseGroups"
           :key="group.exercise.id"
@@ -91,7 +91,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useWorkoutStore } from '@/stores/workoutStore'
 import AppLayout from '@/components/layout/AppLayout.vue'
@@ -110,6 +110,35 @@ const loading = ref(true)
 const showSelector = ref(false)
 const finishing = ref(false)
 const notes = ref('')
+const exerciseListEl = ref(null)
+let lockedPageY = 0
+
+function blurActiveElement() {
+  if (document.activeElement instanceof HTMLElement) {
+    document.activeElement.blur()
+  }
+}
+
+function lockBackgroundScroll() {
+  lockedPageY = window.scrollY || 0
+  document.documentElement.style.overflow = 'hidden'
+  document.body.style.position = 'fixed'
+  document.body.style.top = `-${lockedPageY}px`
+  document.body.style.left = '0'
+  document.body.style.right = '0'
+  document.body.style.width = '100%'
+}
+
+function unlockBackgroundScroll() {
+  if (document.body.style.position !== 'fixed') return
+  document.documentElement.style.overflow = ''
+  document.body.style.position = ''
+  document.body.style.top = ''
+  document.body.style.left = ''
+  document.body.style.right = ''
+  document.body.style.width = ''
+  window.scrollTo(0, lockedPageY)
+}
 
 // Groups sets by exercise id; muscle_group comes from the set's exercise_muscle_group
 const exerciseGroups = computed(() => {
@@ -140,7 +169,22 @@ onMounted(async () => {
   loading.value = false
 })
 
+watch(showSelector, (open) => {
+  if (open) {
+    lockBackgroundScroll()
+    return
+  }
+  unlockBackgroundScroll()
+})
+
+onBeforeUnmount(() => {
+  unlockBackgroundScroll()
+})
+
 async function addExercise(exercise) {
+  const pageY = window.scrollY || 0
+  const listY = exerciseListEl.value?.scrollTop ?? 0
+  blurActiveElement()
   showSelector.value = false
   const isCardio = exercise.muscle_group === 'Cardio'
   const res = await fetch(`/api/workouts/${workout.value.id}/sets`, {
@@ -155,6 +199,11 @@ async function addExercise(exercise) {
   // exercise_muscle_group comes from the API response now
   if (!workout.value.sets) workout.value.sets = []
   workout.value.sets.push(newSet)
+  await nextTick()
+  if (exerciseListEl.value) {
+    exerciseListEl.value.scrollTop = listY
+  }
+  window.scrollTo(0, pageY)
 }
 
 function removeExerciseFromWorkout(exerciseId) {

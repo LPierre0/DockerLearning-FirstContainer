@@ -1,10 +1,11 @@
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import joinedload
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import BodyMeasurement, BodyWeight, Exercise, User, Workout, WorkoutSet
+from models import BodyMeasurement, BodyWeight, User, Workout, WorkoutSet
 from schemas import InsightPromptOut
 
 router = APIRouter(prefix="/insights", tags=["insights"])
@@ -81,61 +82,6 @@ def _summarize_measurements(entries):
     return summary
 
 
-def _summarize_training(db: Session, user_id: int, start: datetime, end: datetime):
-    workout_q = (
-        db.query(Workout)
-        .filter(
-            Workout.user_id == user_id,
-            Workout.completed_at.isnot(None),
-            Workout.completed_at >= start,
-            Workout.completed_at < end,
-        )
-    )
-    workouts = workout_q.all()
-    workout_count = len(workouts)
-
-    rows = (
-        db.query(WorkoutSet, Exercise.name)
-        .join(Workout, WorkoutSet.workout_id == Workout.id)
-        .join(Exercise, WorkoutSet.exercise_id == Exercise.id)
-        .filter(
-            Workout.user_id == user_id,
-            Workout.completed_at.isnot(None),
-            Workout.completed_at >= start,
-            Workout.completed_at < end,
-            WorkoutSet.status == "done",
-        )
-        .all()
-    )
-
-    total_sets = 0
-    total_volume = 0.0
-    exercise_volumes: dict[str, float] = {}
-    best_set = None
-    for ws, exercise_name in rows:
-        total_sets += 1
-
-        if ws.weight_kg is not None and ws.reps is not None:
-            volume = ws.weight_kg * ws.reps
-            total_volume += volume
-            exercise_volumes[exercise_name] = exercise_volumes.get(exercise_name, 0.0) + volume
-
-        if ws.weight_kg is not None and (best_set is None or ws.weight_kg > best_set["weight"]):
-            best_set = {
-                "exercise": exercise_name,
-                "weight": ws.weight_kg,
-                "reps": ws.reps,
-            }
-
-    return {
-        "workouts": workout_count,
-        "sets": total_sets,
-        "volume": total_volume,
-        "exercise_volumes": exercise_volumes,
-        "best_set": best_set,
-    }
-
-
 def _format_measurement_row(entry: BodyMeasurement) -> str:
     values = []
     for key, label in MEASUREMENT_FIELDS:
@@ -145,6 +91,53 @@ def _format_measurement_row(entry: BodyMeasurement) -> str:
     if not values:
         values = ["aucune valeur"]
     return f"- {entry.logged_at.strftime('%Y-%m-%d')}: " + " | ".join(values)
+
+
+def _format_set_row(workout_set: WorkoutSet) -> str:
+    parts = [
+        f"{workout_set.exercise.name} - serie {workout_set.set_number}",
+        f"statut={workout_set.status}",
+    ]
+    if workout_set.weight_kg is not None:
+        parts.append(f"charge={_fmt(workout_set.weight_kg)} kg")
+    if workout_set.reps is not None:
+        parts.append(f"reps={workout_set.reps}")
+    if workout_set.rpe is not None:
+        parts.append(f"rpe={workout_set.rpe}")
+    if workout_set.duration_seconds is not None:
+        parts.append(f"duree={int(workout_set.duration_seconds)} sec")
+    if workout_set.resistance is not None:
+        parts.append(f"resistance={workout_set.resistance}")
+    if workout_set.calories is not None:
+        parts.append(f"calories={workout_set.calories}")
+    if workout_set.notes:
+        parts.append(f"note_set={workout_set.notes.strip()}")
+    return " | ".join(parts)
+
+
+def _format_workouts_full_lines(workouts: list[Workout]) -> list[str]:
+    if not workouts:
+        return ["- Donnees insuffisantes: aucune seance completee sur la periode."]
+
+    lines: list[str] = []
+    for workout in workouts:
+        completed_at = workout.completed_at.strftime("%Y-%m-%d %H:%M") if workout.completed_at else "n/a"
+        title_parts = [f"- Seance #{workout.id}"]
+        title_parts.append(f"date={completed_at}")
+        title_parts.append(f"type={workout.type}")
+        if workout.name:
+            title_parts.append(f"nom={workout.name}")
+        if workout.notes:
+            title_parts.append(f"note={workout.notes.strip()}")
+        lines.append(" | ".join(title_parts))
+
+        sorted_sets = sorted(workout.sets, key=lambda s: s.id)
+        if not sorted_sets:
+            lines.append("  - Aucune serie")
+            continue
+        for workout_set in sorted_sets:
+            lines.append(f"  - {_format_set_row(workout_set)}")
+    return lines
 
 
 @router.get("/prompt", response_model=InsightPromptOut)
@@ -194,8 +187,30 @@ def get_insight_prompt(
     meas_cur = _summarize_measurements(meas_current)
     meas_prev = _summarize_measurements(meas_previous)
 
-    train_cur = _summarize_training(db, user_id, start, now)
-    train_prev = _summarize_training(db, user_id, prev_start, prev_end)
+    workouts_current = (
+        db.query(Workout)
+        .options(joinedload(Workout.sets).joinedload(WorkoutSet.exercise))
+        .filter(
+            Workout.user_id == user_id,
+            Workout.completed_at.isnot(None),
+            Workout.completed_at >= start,
+            Workout.completed_at < now,
+        )
+        .order_by(Workout.completed_at.asc())
+        .all()
+    )
+    workouts_previous = (
+        db.query(Workout)
+        .options(joinedload(Workout.sets).joinedload(WorkoutSet.exercise))
+        .filter(
+            Workout.user_id == user_id,
+            Workout.completed_at.isnot(None),
+            Workout.completed_at >= prev_start,
+            Workout.completed_at < prev_end,
+        )
+        .order_by(Workout.completed_at.asc())
+        .all()
+    )
 
     weight_lines = []
     if weight_cur.get("count", 0) == 0:
@@ -224,26 +239,8 @@ def get_insight_prompt(
             delta_txt = f"delta periode {_fmt(cur['delta'])} cm" if cur["delta"] is not None else "une seule mesure"
             measurement_lines.append(f"- {label}: {_fmt(cur['last'])} cm ({delta_txt}{prev_delta_txt}).")
 
-    perf_lines = [
-        f"- Seances completes: {train_cur['workouts']} (vs periode precedente {train_cur['workouts'] - train_prev['workouts']:+d}).",
-        f"- Series reussies: {train_cur['sets']} (vs periode precedente {train_cur['sets'] - train_prev['sets']:+d}).",
-        f"- Volume total estime: {_fmt(train_cur['volume'], 0)} kg (vs periode precedente {_fmt(train_cur['volume'] - train_prev['volume'], 0)} kg).",
-    ]
-    if train_cur["best_set"] is not None:
-        best = train_cur["best_set"]
-        reps_txt = f" x {best['reps']} reps" if best["reps"] is not None else ""
-        perf_lines.append(f"- Meilleure charge: {best['exercise']} a {_fmt(best['weight'])} kg{reps_txt}.")
-    else:
-        perf_lines.append("- Donnees insuffisantes: aucune serie 'done' avec charge sur la periode.")
-
-    top_current = sorted(train_cur["exercise_volumes"].items(), key=lambda item: item[1], reverse=True)[:3]
-    if top_current:
-        perf_lines.append("- Exercices dominants (volume):")
-        for name, cur_vol in top_current:
-            prev_vol = train_prev["exercise_volumes"].get(name, 0.0)
-            perf_lines.append(f"  - {name}: {_fmt(cur_vol, 0)} kg (vs prev {_fmt(cur_vol - prev_vol, 0)} kg)")
-    else:
-        perf_lines.append("- Exercices dominants: donnees insuffisantes.")
+    full_workout_lines = _format_workouts_full_lines(workouts_current)
+    full_workout_prev_lines = _format_workouts_full_lines(workouts_previous)
 
     raw_weight_lines = [
         f"- {w.logged_at.strftime('%Y-%m-%d')}: {_fmt(w.weight_kg)} kg"
@@ -253,8 +250,8 @@ def get_insight_prompt(
 
     prompt = "\n".join(
         [
-            "Tu es un coach sportif et progression analyst.",
-            "Analyse les donnees ci-dessous et reponds en francais clair, concret et actionnable.",
+            "Tu es un coach sportif et analyste de progression.",
+            "Analyse les donnees ci-dessous et reponds en francais clair et concret.",
             "",
             "## Contexte",
             f"- Profil: {user.name}",
@@ -268,8 +265,11 @@ def get_insight_prompt(
             "## Synthese mensurations",
             *measurement_lines,
             "",
-            "## Synthese performances",
-            *perf_lines,
+            "## Seances completes (periode analysee)",
+            *full_workout_lines,
+            "",
+            "## Seances completes (periode precedente de reference)",
+            *full_workout_prev_lines,
             "",
             "## Donnees semi-brutes recentes",
             "Poids (dernieres entrees):",
@@ -278,13 +278,14 @@ def get_insight_prompt(
             *raw_measurement_lines,
             "",
             "## Ta mission",
-            "Donne une reponse en 4 parties:",
+            "Donne une reponse en 3 parties:",
             "1) Analyse de la progression (forces / stagnations / incoherences).",
             "2) Hypotheses explicatives priorisees (entrainement, recuperation, nutrition, adherence).",
-            "3) Plan d'action concret: 3 a 5 actions pour les 7 prochains jours, tres specifiques.",
-            "4) Un mini check-list de suivi pour le prochain bilan (indicateurs a surveiller).",
+            "3) Avis global sur l'evolution a partir des seances completes, du poids et des mensurations.",
             "",
-            "Contrainte: si les donnees sont insuffisantes, dis-le explicitement puis propose quand meme des actions pragmatiques.",
+            "Contrainte: ne rends pas un plan d'action obligatoire.",
+            "Si tu proposes des pistes, garde-les optionnelles et non prescriptives.",
+            "Si les donnees sont insuffisantes, dis-le explicitement.",
         ]
     )
 

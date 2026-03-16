@@ -24,25 +24,52 @@
     </div>
 
     <!-- Exercise list -->
-    <div class="flex-1 overflow-y-auto">
+    <div class="flex-1 overflow-y-auto overscroll-contain">
       <LoadingSpinner v-if="loading" />
-      <div v-else>
-        <button
-          v-for="ex in filtered"
-          :key="ex.id"
-          @click="$emit('select', ex)"
-          class="w-full text-left px-4 py-3 border-b border-apbborder/50 hover:bg-surface2 transition-colors"
-        >
-          <div class="flex items-center gap-3">
-            <ExerciseThumb :src="ex.photo_url" :alt="ex.name" :size="38" />
-            <div class="min-w-0">
-              <div class="font-medium text-apptext text-sm truncate">{{ ex.name }}</div>
-              <div class="text-xs text-muted">{{ ex.muscle_group }}</div>
+      <div v-else class="p-3">
+        <p class="text-[11px] text-muted mb-2">
+          Trie: plus utilises d'abord
+        </p>
+        <div v-if="filtered.length" class="flex flex-col gap-3">
+          <button
+            v-for="ex in filtered"
+            :key="ex.id"
+            @click="$emit('select', ex)"
+            class="w-full text-left rounded-card border border-apbborder bg-surface overflow-hidden hover:bg-surface2 active:scale-[0.995] transition-all"
+          >
+            <div class="relative h-36 bg-surface2">
+              <img
+                v-if="ex.photo_url"
+                :src="ex.photo_url"
+                :alt="ex.name"
+                class="absolute inset-0 w-full h-full object-cover"
+                loading="lazy"
+              />
+              <div
+                v-else
+                class="absolute inset-0 flex items-center justify-center text-muted text-xs font-medium tracking-wide"
+              >
+                Aucune photo
+              </div>
+              <span
+                class="absolute top-2 right-2 shrink-0 text-[10px] px-2 py-0.5 rounded-full border backdrop-blur-sm"
+                :class="(ex.usage_count || 0) > 0 ? 'border-primary/40 text-primary bg-primary/10' : 'border-apbborder text-muted bg-surface2'"
+              >
+                {{ (ex.usage_count || 0) > 0 ? `${ex.usage_count} usages` : 'Nouveau' }}
+              </span>
             </div>
-          </div>
-        </button>
+            <div class="p-3">
+              <div class="font-semibold text-apptext text-base leading-tight truncate mb-1">
+                {{ ex.name }}
+              </div>
+              <div class="text-xs text-muted">
+                {{ ex.muscle_group }}
+              </div>
+            </div>
+          </button>
+        </div>
         <EmptyState
-          v-if="!filtered.length"
+          v-else
           icon="🔍"
           message="Aucun exercice trouvé."
         />
@@ -98,7 +125,6 @@ import { ref, computed, onMounted } from 'vue'
 import { useProfileStore } from '@/stores/profileStore'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
-import ExerciseThumb from '@/components/ui/ExerciseThumb.vue'
 
 const emit = defineEmits(['select'])
 
@@ -125,7 +151,11 @@ const filtered = computed(() => {
     const q = search.value.toLowerCase()
     list = list.filter(e => e.name.toLowerCase().includes(q))
   }
-  return list
+  return [...list].sort((a, b) => {
+    const usageDiff = (b.usage_count || 0) - (a.usage_count || 0)
+    if (usageDiff !== 0) return usageDiff
+    return a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' })
+  })
 })
 
 onMounted(async () => {
