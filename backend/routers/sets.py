@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import WorkoutSet, Exercise
+from routers.exercises import exercise_photo_url
 from schemas import SetOut, SetUpdate
 
 router = APIRouter(prefix="/sets", tags=["sets"])
@@ -15,6 +16,7 @@ def _set_to_out(s: WorkoutSet) -> SetOut:
         exercise_id=s.exercise_id,
         exercise_name=s.exercise.name,
         exercise_muscle_group=s.exercise.muscle_group,
+        exercise_photo_url=exercise_photo_url(s.exercise_id, s.exercise.photo_filename),
         set_number=s.set_number,
         weight_kg=s.weight_kg,
         reps=s.reps,

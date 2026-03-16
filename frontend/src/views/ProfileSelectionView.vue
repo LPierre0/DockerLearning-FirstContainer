@@ -14,12 +14,12 @@
         @click="select(user)"
         class="flex-1 flex flex-col items-center justify-center gap-4 p-8 rounded-card border-2 transition-all duration-200 cursor-pointer"
         :class="user.theme_key === 'pierre'
-          ? 'bg-slate-900 border-indigo-500 hover:border-indigo-400 hover:scale-105 text-slate-200'
+          ? 'bg-white border-[#4F46E5] hover:border-indigo-400 hover:scale-105 text-[#1C1917]'
           : 'bg-pink-50 border-pink-400 hover:border-pink-500 hover:scale-105 text-purple-900'"
       >
         <div
           class="w-16 h-16 rounded-full flex items-center justify-center text-3xl font-bold text-white"
-          :class="user.theme_key === 'pierre' ? 'bg-indigo-500' : 'bg-pink-400'"
+          :class="user.theme_key === 'pierre' ? 'bg-[#4F46E5]' : 'bg-pink-400'"
         >
           {{ user.name[0].toUpperCase() }}
         </div>

@@ -8,9 +8,12 @@
       <LoadingSpinner v-if="loading" size="lg" />
 
       <div v-else-if="data">
-        <div class="mb-6">
-          <h1 class="text-xl font-bold text-apptext">{{ data.exercise.name }}</h1>
-          <span class="text-xs text-muted">{{ data.exercise.muscle_group }}</span>
+        <div class="mb-6 flex items-center gap-3">
+          <ExerciseThumb :src="data.exercise.photo_url" :alt="data.exercise.name" :size="54" />
+          <div>
+            <h1 class="text-xl font-bold text-apptext">{{ data.exercise.name }}</h1>
+            <span class="text-xs text-muted">{{ data.exercise.muscle_group }}</span>
+          </div>
         </div>
 
         <!-- PR Banner -->
@@ -61,6 +64,7 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import PRBadge from '@/components/charts/PRBadge.vue'
 import ProgressChart from '@/components/charts/ProgressChart.vue'
+import ExerciseThumb from '@/components/ui/ExerciseThumb.vue'
 
 const route = useRoute()
 const profileStore = useProfileStore()

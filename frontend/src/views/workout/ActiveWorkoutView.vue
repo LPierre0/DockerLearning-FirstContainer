@@ -65,22 +65,27 @@
 
     <!-- Exercise selector drawer (mobile) / modal (desktop) -->
     <Teleport to="body">
-      <div
-        v-if="showSelector"
-        class="fixed inset-0 z-50 flex items-end lg:items-center justify-center"
-      >
-        <!-- Backdrop -->
-        <div class="absolute inset-0 bg-black/50" @click="showSelector = false" />
-
-        <!-- Sheet -->
-        <div class="relative z-10 w-full lg:w-[480px] h-3/4 lg:h-[600px] bg-surface rounded-t-2xl lg:rounded-card overflow-hidden flex flex-col">
-          <div class="flex items-center justify-between p-4 border-b border-apbborder">
-            <h2 class="font-semibold text-apptext">Choisir un exercice</h2>
-            <button @click="showSelector = false" class="text-muted hover:text-apptext text-xl">×</button>
+      <Transition name="backdrop">
+        <div
+          v-if="showSelector"
+          class="fixed inset-0 z-50 bg-black/50"
+          @click="showSelector = false"
+        />
+      </Transition>
+      <Transition name="sheet">
+        <div
+          v-if="showSelector"
+          class="fixed inset-x-0 bottom-0 z-[51] lg:inset-0 lg:flex lg:items-center lg:justify-center"
+        >
+          <div class="w-full lg:w-[480px] h-3/4 lg:h-[600px] bg-surface rounded-t-2xl lg:rounded-card overflow-hidden flex flex-col">
+            <div class="flex items-center justify-between p-4 border-b border-apbborder">
+              <h2 class="font-semibold text-apptext">Choisir un exercice</h2>
+              <button @click="showSelector = false" class="text-muted hover:text-apptext text-xl">×</button>
+            </div>
+            <ExerciseSelector @select="addExercise" class="flex-1 overflow-hidden" />
           </div>
-          <ExerciseSelector @select="addExercise" class="flex-1 overflow-hidden" />
         </div>
-      </div>
+      </Transition>
     </Teleport>
   </AppLayout>
 </template>
@@ -108,7 +113,7 @@ const notes = ref('')
 
 // Groups sets by exercise id; muscle_group comes from the set's exercise_muscle_group
 const exerciseGroups = computed(() => {
-  if (!workout.value) return []
+  if (!workout.value?.sets) return []
   const map = new Map()
   for (const s of workout.value.sets) {
     if (!map.has(s.exercise_id)) {
@@ -117,6 +122,7 @@ const exerciseGroups = computed(() => {
           id:           s.exercise_id,
           name:         s.exercise_name,
           muscle_group: s.exercise_muscle_group ?? '',
+          photo_url:    s.exercise_photo_url ?? null,
         },
         sets: [],
       })
@@ -171,6 +177,6 @@ async function finish() {
     body: JSON.stringify({ completed_at: new Date().toISOString(), notes: notes.value }),
   })
   workoutStore.clearActive()
-  router.push(`/history/${workout.value.id}`)
+  router.push(`/history/${workout.value.id}?justFinished=true`)
 }
 </script>

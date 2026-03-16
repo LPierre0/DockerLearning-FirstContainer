@@ -5,6 +5,7 @@ from sqlalchemy import func
 
 from database import get_db
 from models import Workout, WorkoutSet, Exercise, User
+from routers.exercises import exercise_photo_url
 from schemas import PROut, ExerciseProgress, ExerciseOut, ProgressEntry
 
 router = APIRouter(prefix="/progress", tags=["progress"])
@@ -55,6 +56,7 @@ def get_prs(user_id: int, db: Session = Depends(get_db)):
                 exercise_id=exercise_id,
                 exercise_name=ex.name,
                 muscle_group=ex.muscle_group,
+                exercise_photo_url=exercise_photo_url(exercise_id, ex.photo_filename),
                 weight_kg=max_weight,
                 reps=best_set.reps,
                 date=best_set.logged_at,
@@ -121,6 +123,7 @@ def get_exercise_progress(user_id: int, exercise_id: int, db: Session = Depends(
             exercise_id=exercise_id,
             exercise_name=exercise.name,
             muscle_group=exercise.muscle_group,
+            exercise_photo_url=exercise_photo_url(exercise_id, exercise.photo_filename),
             weight_kg=pr_weight,
             reps=pr_reps,
             date=pr_date,
@@ -133,6 +136,7 @@ def get_exercise_progress(user_id: int, exercise_id: int, db: Session = Depends(
             muscle_group=exercise.muscle_group,
             is_custom=exercise.is_custom,
             created_by=exercise.created_by,
+            photo_url=exercise_photo_url(exercise.id, exercise.photo_filename),
         ),
         pr=pr,
         history=history,

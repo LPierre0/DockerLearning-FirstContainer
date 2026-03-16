@@ -1,27 +1,28 @@
 <template>
   <div class="flex flex-col items-center gap-0.5 select-none">
-    <button
-      @click="increment"
-      class="w-8 h-8 rounded-btn bg-surface2 text-apptext text-base font-bold active:scale-90 transition-transform flex items-center justify-center border border-apbborder leading-none"
-    >+</button>
-
-    <input
-      :value="displayValue"
-      @focus="$event.target.select()"
-      @change="onManualInput($event.target.value)"
-      type="number"
-      :step="step"
-      :min="min"
-      inputmode="decimal"
-      class="w-14 h-9 text-center text-base font-bold text-apptext bg-surface border border-apbborder rounded-btn focus:outline-none focus:border-primary tabular-nums"
-    />
-
-    <button
-      @click="decrement"
-      class="w-8 h-8 rounded-btn bg-surface2 text-apptext text-base font-bold active:scale-90 transition-transform flex items-center justify-center border border-apbborder leading-none"
-    >−</button>
-
-    <span class="text-[10px] text-muted mt-0.5">{{ unit }}</span>
+    <div class="flex items-center">
+      <button
+        @click="decrement"
+        class="w-10 h-10 flex items-center justify-center bg-surface2 border border-apbborder text-apptext text-lg font-bold active:brightness-90 active:scale-95 transition-all leading-none"
+        style="border-radius: var(--radius-btn) 0 0 var(--radius-btn)"
+      >−</button>
+      <input
+        :value="displayValue"
+        @focus="$event.target.select()"
+        @change="onManualInput($event.target.value)"
+        type="number"
+        :step="step"
+        :min="min"
+        inputmode="decimal"
+        class="w-16 h-10 text-center text-sm font-bold text-apptext bg-surface border-y border-apbborder focus:outline-none focus:border-primary tabular-nums"
+      />
+      <button
+        @click="increment"
+        class="w-10 h-10 flex items-center justify-center bg-surface2 border border-apbborder text-apptext text-lg font-bold active:brightness-90 active:scale-95 transition-all leading-none"
+        style="border-radius: 0 var(--radius-btn) var(--radius-btn) 0"
+      >+</button>
+    </div>
+    <span class="text-[10px] text-muted">{{ unit }}</span>
   </div>
 </template>
 

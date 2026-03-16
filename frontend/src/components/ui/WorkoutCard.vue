@@ -1,27 +1,22 @@
 <template>
-  <div class="bg-surface border border-apbborder border-l-2 border-l-primary/30 rounded-card p-4 hover:border-primary/50 transition-colors cursor-pointer">
-    <div class="flex items-start justify-between mb-3">
-      <div>
+  <div class="bg-surface border border-apbborder rounded-card p-4 hover:shadow-sm hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
+    <div class="flex items-start justify-between mb-2">
+      <div class="flex-1 min-w-0">
         <span class="inline-block text-xs font-bold px-2 py-0.5 rounded-btn bg-primary/15 text-primary mb-1">
           {{ workout.type }}
         </span>
-        <h3 v-if="workout.name" class="font-semibold text-apptext text-sm">{{ workout.name }}</h3>
+        <h3 v-if="workout.name" class="font-semibold text-apptext text-sm truncate">{{ workout.name }}</h3>
       </div>
-      <span class="text-xs text-muted tabular-nums">{{ formatDate(workout.completed_at || workout.started_at) }}</span>
+      <span class="text-xs text-muted tabular-nums shrink-0 ml-3">{{ formatDate(workout.completed_at || workout.started_at) }}</span>
     </div>
-    <div class="flex items-center gap-4 text-xs text-muted">
-      <span class="flex items-center gap-1">
-        <AppIcon name="squares" :size="13" />
-        {{ workout.exercise_count }} exercice{{ workout.exercise_count !== 1 ? 's' : '' }}
-      </span>
-      <span class="flex items-center gap-1">
-        <AppIcon name="list-bullet" :size="13" />
-        {{ workout.set_count }} série{{ workout.set_count !== 1 ? 's' : '' }}
-      </span>
-      <span v-if="workout.completed_at" class="flex items-center gap-1">
-        <AppIcon name="clock" :size="13" />
-        {{ duration }}
-      </span>
+    <div class="flex items-center gap-2 text-xs text-muted">
+      <span>{{ workout.exercise_count }} exo{{ workout.exercise_count !== 1 ? 's' : '' }}</span>
+      <span class="opacity-30">|</span>
+      <span>{{ workout.set_count }} série{{ workout.set_count !== 1 ? 's' : '' }}</span>
+      <template v-if="workout.completed_at">
+        <span class="opacity-30">|</span>
+        <span>{{ duration }}</span>
+      </template>
     </div>
     <p v-if="workout.notes" class="mt-2 text-xs text-muted italic truncate">{{ workout.notes }}</p>
   </div>
@@ -29,7 +24,6 @@
 
 <script setup>
 import { computed } from 'vue'
-import AppIcon from '@/components/ui/AppIcon.vue'
 
 const props = defineProps({
   workout: { type: Object, required: true },
@@ -37,7 +31,7 @@ const props = defineProps({
 
 function formatDate(dateStr) {
   if (!dateStr) return ''
-  return new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(dateStr))
+  return new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(dateStr))
 }
 
 const duration = computed(() => {

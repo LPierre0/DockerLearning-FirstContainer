@@ -5,15 +5,22 @@
         v-for="item in navItems"
         :key="item.to"
         :to="item.to"
-        class="flex-1 flex flex-col items-center justify-center gap-1.5 py-3 text-xs font-medium transition-colors relative"
-        :class="isActive(item.to) ? 'text-primary' : 'text-muted'"
+        class="flex-1 flex flex-col items-center justify-center py-2 text-xs font-medium active:scale-95 transition-transform"
       >
         <span
-          v-if="isActive(item.to)"
-          class="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-primary"
-        />
-        <AppIcon :name="item.icon" :size="20" />
-        <span class="text-[11px] tracking-wide">{{ item.label }}</span>
+          class="flex flex-col items-center gap-1 px-3 py-1.5 rounded-full transition-all duration-200"
+          :class="isActive(item.to) ? 'bg-primary/15' : ''"
+        >
+          <AppIcon
+            :name="item.icon"
+            :size="isActive(item.to) ? 22 : 20"
+            :class="isActive(item.to) ? 'text-primary' : 'text-muted'"
+          />
+          <span
+            class="text-[11px] tracking-wide"
+            :class="isActive(item.to) ? 'text-primary' : 'text-muted'"
+          >{{ item.label }}</span>
+        </span>
       </RouterLink>
     </div>
   </nav>
@@ -39,7 +46,7 @@ const navItems = computed(() => {
     { to: '/history',     icon: 'clock',     label: 'Historique' },
     { to: '/progress',    icon: 'chart-bar', label: 'Progression' },
     { to: '/profile',     icon: 'scale',     label: 'Poids' },
-    { to: '/dashboard',   icon: 'home',      label: 'Dashboard' },
+    { to: '/exercises',   icon: 'list-bullet', label: 'Exercices' },
   ]
   if (profileStore.themeKey === 'partner') {
     items.push({ to: '/cycle', icon: 'calendar', label: 'Cycle' })

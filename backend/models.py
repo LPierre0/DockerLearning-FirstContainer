@@ -17,6 +17,8 @@ class User(Base):
     custom_exercises = relationship("Exercise", back_populates="creator")
     sent_boosts = relationship("Boost", foreign_keys="Boost.from_user_id", back_populates="sender")
     received_boosts = relationship("Boost", foreign_keys="Boost.to_user_id", back_populates="recipient")
+    favorite_templates = relationship("FavoriteTemplate", back_populates="user")
+    body_measurements = relationship("BodyMeasurement", back_populates="user")
 
 
 class Exercise(Base):
@@ -27,6 +29,7 @@ class Exercise(Base):
     muscle_group = Column(String, nullable=False)
     is_custom = Column(Boolean, default=False)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    photo_filename = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     creator = relationship("User", back_populates="custom_exercises")
@@ -81,6 +84,22 @@ class BodyWeight(Base):
     user = relationship("User")
 
 
+class BodyMeasurement(Base):
+    __tablename__ = "body_measurements"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    chest_cm = Column(Float, nullable=True)
+    waist_cm = Column(Float, nullable=True)
+    hips_cm = Column(Float, nullable=True)
+    arm_cm = Column(Float, nullable=True)
+    thigh_cm = Column(Float, nullable=True)
+    calf_cm = Column(Float, nullable=True)
+    logged_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="body_measurements")
+
+
 class Boost(Base):
     __tablename__ = "boosts"
 
@@ -93,3 +112,15 @@ class Boost(Base):
 
     sender = relationship("User", foreign_keys=[from_user_id], back_populates="sent_boosts")
     recipient = relationship("User", foreign_keys=[to_user_id], back_populates="received_boosts")
+
+
+class FavoriteTemplate(Base):
+    __tablename__ = "favorite_templates"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    name = Column(String, nullable=False)
+    workout_type = Column(String, nullable=False)  # Push/Pull/Legs/Full Body/Cardio/Custom
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="favorite_templates")

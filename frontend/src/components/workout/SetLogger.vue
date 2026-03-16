@@ -2,9 +2,12 @@
   <div class="flex flex-col gap-2 p-4 bg-surface rounded-card border border-apbborder">
     <!-- Exercise header -->
     <div class="flex items-center justify-between mb-1">
-      <div>
-        <h3 class="font-semibold text-apptext">{{ exercise.name }}</h3>
-        <span class="text-xs text-muted">{{ exercise.muscle_group }}</span>
+      <div class="flex items-center gap-2">
+        <ExerciseThumb :src="exercise.photo_url" :alt="exercise.name" :size="34" />
+        <div>
+          <h3 class="font-semibold text-apptext">{{ exercise.name }}</h3>
+          <span class="text-xs text-muted">{{ exercise.muscle_group }}</span>
+        </div>
       </div>
       <button
         @click="removeExercise"
@@ -17,15 +20,17 @@
     </div>
 
     <!-- Sets -->
-    <SetRow
-      v-for="set in sets"
-      :key="set.id"
-      :set="set"
-      :exercise="exercise"
-      @update="(data) => updateSet(set.id, data)"
-      @delete="deleteSet(set.id)"
-      @done="onSetDone"
-    />
+    <TransitionGroup name="set-list" tag="div" class="flex flex-col gap-2">
+      <SetRow
+        v-for="set in sets"
+        :key="set.id"
+        :set="set"
+        :exercise="exercise"
+        @update="(data) => updateSet(set.id, data)"
+        @delete="deleteSet(set.id)"
+        @done="onSetDone"
+      />
+    </TransitionGroup>
 
     <!-- Rest timer -->
     <RestTimer
@@ -50,6 +55,7 @@
 import { ref } from 'vue'
 import SetRow from './SetRow.vue'
 import RestTimer from './RestTimer.vue'
+import ExerciseThumb from '@/components/ui/ExerciseThumb.vue'
 
 const props = defineProps({
   workoutId: { type: Number, required: true },

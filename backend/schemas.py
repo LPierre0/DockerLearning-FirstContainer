@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 
 # ─── Users ────────────────────────────────────────────────────────────────────
@@ -34,6 +34,7 @@ class ExerciseOut(BaseModel):
     muscle_group: str
     is_custom: bool
     created_by: Optional[int]
+    photo_url: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
@@ -52,6 +53,7 @@ class SetOut(BaseModel):
     exercise_id: int
     exercise_name: str
     exercise_muscle_group: str
+    exercise_photo_url: Optional[str] = None
     set_number: int
     weight_kg: Optional[float]
     reps: Optional[int]
@@ -138,6 +140,7 @@ class PROut(BaseModel):
     exercise_id: int
     exercise_name: str
     muscle_group: str
+    exercise_photo_url: Optional[str] = None
     weight_kg: Optional[float]
     reps: Optional[int]
     date: Optional[datetime]
@@ -191,6 +194,47 @@ class BodyWeightCreate(BaseModel):
     logged_at: Optional[datetime] = None
 
 
+class BodyMeasurementOut(BaseModel):
+    id: int
+    user_id: int
+    chest_cm: Optional[float] = None
+    waist_cm: Optional[float] = None
+    hips_cm: Optional[float] = None
+    arm_cm: Optional[float] = None
+    thigh_cm: Optional[float] = None
+    calf_cm: Optional[float] = None
+    logged_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class BodyMeasurementCreate(BaseModel):
+    user_id: int
+    logged_at: Optional[datetime] = None
+    chest_cm: Optional[float] = None
+    waist_cm: Optional[float] = None
+    hips_cm: Optional[float] = None
+    arm_cm: Optional[float] = None
+    thigh_cm: Optional[float] = None
+    calf_cm: Optional[float] = None
+
+    @model_validator(mode="after")
+    def ensure_at_least_one_measurement(self):
+        if all(
+            value is None
+            for value in [
+                self.chest_cm,
+                self.waist_cm,
+                self.hips_cm,
+                self.arm_cm,
+                self.thigh_cm,
+                self.calf_cm,
+            ]
+        ):
+            raise ValueError("At least one measurement is required")
+        return self
+
+
 # ─── Dashboard ────────────────────────────────────────────────────────────────
 
 class DashboardUser(BaseModel):
@@ -204,3 +248,30 @@ class DashboardUser(BaseModel):
 class DashboardOut(BaseModel):
     users: list[DashboardUser]
     recent_boosts: list[BoostOut]
+
+
+# ─── Insights ─────────────────────────────────────────────────────────────────
+
+class InsightPromptOut(BaseModel):
+    template: str
+    period: str
+    generated_at: datetime
+    prompt: str
+
+
+# ─── Favorites ────────────────────────────────────────────────────────────────
+
+class FavoriteOut(BaseModel):
+    id: int
+    user_id: int
+    name: str
+    workout_type: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class FavoriteCreate(BaseModel):
+    user_id: int
+    name: str
+    workout_type: str

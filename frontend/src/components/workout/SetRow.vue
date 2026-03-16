@@ -1,18 +1,19 @@
 <template>
   <div
-    class="rounded-card border p-3 transition-colors"
+    class="rounded-card border p-3 transition-all"
     :class="{
       'border-success bg-success/10': set.status === 'done',
       'border-danger bg-danger/10': set.status === 'failed',
       'border-apbborder bg-surface': set.status === 'pending',
+      'set-done-flash': flashDone,
     }"
   >
     <!-- ── CARDIO ROW ── -->
     <template v-if="isCardio">
-      <div class="flex items-center gap-2">
-        <span class="text-xs font-bold text-muted w-5 shrink-0 text-center">{{ set.set_number }}</span>
+      <!-- Ligne 1 : numéro + contrôles -->
+      <div class="flex items-end gap-2 flex-wrap">
+        <span class="text-xs font-bold text-muted w-5 shrink-0 text-center mb-2">{{ set.set_number }}</span>
 
-        <!-- Duration in minutes -->
         <WeightRepsControl
           v-model="localDurationMin"
           :step="5"
@@ -21,7 +22,6 @@
           @update:modelValue="emitUpdate"
         />
 
-        <!-- Resistance -->
         <WeightRepsControl
           v-model="localResistance"
           :step="1"
@@ -30,7 +30,6 @@
           @update:modelValue="emitUpdate"
         />
 
-        <!-- Calories -->
         <WeightRepsControl
           v-model="localCalories"
           :step="10"
@@ -38,37 +37,39 @@
           unit="kcal"
           @update:modelValue="emitUpdate"
         />
+      </div>
 
-        <div class="flex gap-1 ml-auto shrink-0">
-          <button
-            @click="markDone"
-            class="w-10 h-10 rounded-btn flex items-center justify-center text-lg transition-all active:scale-90"
-            :class="set.status === 'done' ? 'bg-success text-white' : 'bg-surface2 text-muted hover:text-success'"
-          >✓</button>
-          <button
-            @click="markFailed"
-            class="w-10 h-10 rounded-btn flex items-center justify-center text-lg transition-all active:scale-90"
-            :class="set.status === 'failed' ? 'bg-danger text-white' : 'bg-surface2 text-muted hover:text-danger'"
-          >✗</button>
-          <button @click="$emit('delete')" class="w-8 h-10 flex items-center justify-center text-muted hover:text-danger transition-colors" title="Supprimer"><AppIcon name="trash" :size="15" /></button>
-        </div>
+      <!-- Ligne 2 : actions -->
+      <div class="flex justify-end gap-1 mt-1.5">
+        <button
+          @click="markDone"
+          class="w-11 h-11 rounded-btn flex items-center justify-center text-lg transition-all active:scale-90"
+          :class="set.status === 'done' ? 'bg-success text-white' : 'bg-surface2 text-muted hover:text-success'"
+        >✓</button>
+        <button
+          @click="markFailed"
+          class="w-11 h-11 rounded-btn flex items-center justify-center text-lg transition-all active:scale-90"
+          :class="set.status === 'failed' ? 'bg-danger text-white' : 'bg-surface2 text-muted hover:text-danger'"
+        >✗</button>
+        <button @click="$emit('delete')" class="w-8 h-11 flex items-center justify-center text-muted hover:text-danger transition-colors" title="Supprimer"><AppIcon name="trash" :size="15" /></button>
       </div>
     </template>
 
     <!-- ── STRENGTH ROW ── -->
     <template v-else>
-      <div class="flex items-center gap-2">
-        <span class="text-xs font-bold text-muted w-5 shrink-0 text-center">{{ set.set_number }}</span>
+      <!-- Ligne 1 : numéro + contrôles -->
+      <div class="flex items-end gap-2">
+        <span class="text-xs font-bold text-muted w-5 shrink-0 text-center mb-2">{{ set.set_number }}</span>
 
         <WeightRepsControl
           v-model="localWeight"
-          :step="fineMode ? 0.5 : 2.5"
+          :step="2.5"
           :min="0"
           unit="kg"
           @update:modelValue="emitUpdate"
         />
 
-        <span class="text-muted text-base font-bold shrink-0">×</span>
+        <span class="text-muted font-bold mb-2 shrink-0">×</span>
 
         <WeightRepsControl
           v-model="localReps"
@@ -77,38 +78,21 @@
           unit="reps"
           @update:modelValue="emitUpdate"
         />
-
-        <div class="flex gap-1 ml-auto shrink-0">
-          <button
-            @click="markDone"
-            class="w-10 h-10 rounded-btn flex items-center justify-center text-lg transition-all active:scale-90"
-            :class="set.status === 'done' ? 'bg-success text-white' : 'bg-surface2 text-muted hover:text-success'"
-          >✓</button>
-          <button
-            @click="markFailed"
-            class="w-10 h-10 rounded-btn flex items-center justify-center text-lg transition-all active:scale-90"
-            :class="set.status === 'failed' ? 'bg-danger text-white' : 'bg-surface2 text-muted hover:text-danger'"
-          >✗</button>
-          <button @click="$emit('delete')" class="w-8 h-10 flex items-center justify-center text-muted hover:text-danger transition-colors" title="Supprimer"><AppIcon name="trash" :size="15" /></button>
-        </div>
       </div>
 
-      <!-- Fine mode + RPE -->
-      <div class="mt-2 flex items-center gap-2 flex-wrap">
+      <!-- Ligne 2 : actions -->
+      <div class="flex justify-end gap-1 mt-1.5">
         <button
-          @click="fineMode = !fineMode"
-          class="text-xs px-2 py-1 rounded-btn border border-apbborder text-muted hover:text-apptext"
-        >
-          {{ fineMode ? '± 0.5 kg' : '± 2.5 kg' }}
-        </button>
-        <span class="text-xs text-muted">RPE:</span>
+          @click="markDone"
+          class="w-11 h-11 rounded-btn flex items-center justify-center text-lg transition-all active:scale-90"
+          :class="set.status === 'done' ? 'bg-success text-white' : 'bg-surface2 text-muted hover:text-success'"
+        >✓</button>
         <button
-          v-for="r in rpeLevels"
-          :key="r"
-          @click="localRpe = r; emitUpdate()"
-          class="text-xs w-7 h-7 rounded-btn transition-all"
-          :class="localRpe === r ? 'bg-primary text-white' : 'bg-surface2 text-muted hover:text-apptext border border-apbborder'"
-        >{{ r }}</button>
+          @click="markFailed"
+          class="w-11 h-11 rounded-btn flex items-center justify-center text-lg transition-all active:scale-90"
+          :class="set.status === 'failed' ? 'bg-danger text-white' : 'bg-surface2 text-muted hover:text-danger'"
+        >✗</button>
+        <button @click="$emit('delete')" class="w-8 h-11 flex items-center justify-center text-muted hover:text-danger transition-colors" title="Supprimer"><AppIcon name="trash" :size="15" /></button>
       </div>
     </template>
 
@@ -140,8 +124,6 @@ const isCardio = computed(() => props.exercise?.muscle_group === 'Cardio')
 // Strength fields
 const localWeight = ref(props.set.weight_kg ?? 0)
 const localReps   = ref(props.set.reps ?? 0)
-const localRpe    = ref(props.set.rpe ?? null)
-const fineMode    = ref(false)
 
 // Cardio fields (duration stored as seconds, displayed as minutes)
 const localDurationMin = ref(Math.round((props.set.duration_seconds ?? 0) / 60))
@@ -149,16 +131,23 @@ const localResistance  = ref(props.set.resistance ?? 5)
 const localCalories    = ref(props.set.calories ?? 0)
 const localNotes       = ref(props.set.notes ?? '')
 
-const rpeLevels = [6, 7, 8, 9, 10]
+// Flash animation on done
+const flashDone = ref(false)
 
 watch(() => props.set, (s) => {
   localWeight.value      = s.weight_kg ?? 0
   localReps.value        = s.reps ?? 0
-  localRpe.value         = s.rpe ?? null
   localDurationMin.value = Math.round((s.duration_seconds ?? 0) / 60)
   localResistance.value  = s.resistance ?? 5
   localCalories.value    = s.calories ?? 0
   localNotes.value       = s.notes ?? ''
+})
+
+watch(() => props.set.status, (newVal) => {
+  if (newVal === 'done') {
+    flashDone.value = true
+    setTimeout(() => { flashDone.value = false }, 300)
+  }
 })
 
 function buildPayload(status) {
@@ -173,7 +162,6 @@ function buildPayload(status) {
   return {
     weight_kg: localWeight.value,
     reps:      localReps.value,
-    rpe:       localRpe.value,
     status,
   }
 }
@@ -191,7 +179,10 @@ function emitNotes() {
 function markDone() {
   const newStatus = props.set.status === 'done' ? 'pending' : 'done'
   emit('update', buildPayload(newStatus))
-  if (newStatus === 'done') emit('done')
+  if (newStatus === 'done') {
+    emit('done')
+    navigator.vibrate?.(8)
+  }
 }
 
 function markFailed() {

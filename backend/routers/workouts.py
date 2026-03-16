@@ -8,6 +8,7 @@ from sqlalchemy import func
 
 from database import get_db
 from models import Workout, WorkoutSet, Exercise, User
+from routers.exercises import exercise_photo_url
 from schemas import (
     WorkoutOut, WorkoutDetail, WorkoutCreate, WorkoutUpdate,
     SetOut, SetCreate,
@@ -31,6 +32,14 @@ def _workout_to_out(w: Workout) -> WorkoutOut:
     )
 
 
+def _sort_sets(sets):
+    min_id = {}
+    for s in sets:
+        if s.exercise_id not in min_id or s.id < min_id[s.exercise_id]:
+            min_id[s.exercise_id] = s.id
+    return sorted(sets, key=lambda x: (min_id[x.exercise_id], x.set_number))
+
+
 def _set_to_out(s: WorkoutSet) -> SetOut:
     return SetOut(
         id=s.id,
@@ -38,6 +47,7 @@ def _set_to_out(s: WorkoutSet) -> SetOut:
         exercise_id=s.exercise_id,
         exercise_name=s.exercise.name,
         exercise_muscle_group=s.exercise.muscle_group,
+        exercise_photo_url=exercise_photo_url(s.exercise_id, s.exercise.photo_filename),
         set_number=s.set_number,
         weight_kg=s.weight_kg,
         reps=s.reps,
@@ -85,7 +95,7 @@ def create_workout(payload: WorkoutCreate, db: Session = Depends(get_db)):
     if payload.template_id:
         template = db.query(Workout).filter(Workout.id == payload.template_id).first()
         if template:
-            for s in sorted(template.sets, key=lambda x: (x.exercise_id, x.set_number)):
+            for s in _sort_sets(template.sets):
                 copied = WorkoutSet(
                     workout_id=workout.id,
                     exercise_id=s.exercise_id,
@@ -127,7 +137,7 @@ def get_last_workout(user_id: int, type: str, db: Session = Depends(get_db)):
         notes=workout.notes,
         started_at=workout.started_at,
         completed_at=workout.completed_at,
-        sets=[_set_to_out(s) for s in sorted(workout.sets, key=lambda x: (x.exercise_id, x.set_number))],
+        sets=[_set_to_out(s) for s in _sort_sets(workout.sets)],
     )
 
 
@@ -143,7 +153,7 @@ def export_workouts(user_id: int, db: Session = Depends(get_db)):
     writer = csv.writer(output)
     writer.writerow(["date", "type", "exercise", "set", "weight_kg", "reps", "rpe", "duration_min", "resistance", "calories", "status"])
     for w in workouts:
-        for s in sorted(w.sets, key=lambda x: (x.exercise_id, x.set_number)):
+        for s in _sort_sets(w.sets):
             writer.writerow([
                 w.completed_at.strftime("%Y-%m-%d") if w.completed_at else "",
                 w.type,
@@ -192,7 +202,7 @@ def get_previous_workout(workout_id: int, db: Session = Depends(get_db)):
         notes=previous.notes,
         started_at=previous.started_at,
         completed_at=previous.completed_at,
-        sets=[_set_to_out(s) for s in sorted(previous.sets, key=lambda x: (x.exercise_id, x.set_number))],
+        sets=[_set_to_out(s) for s in _sort_sets(previous.sets)],
     )
 
 
@@ -209,7 +219,7 @@ def get_workout(workout_id: int, db: Session = Depends(get_db)):
         notes=workout.notes,
         started_at=workout.started_at,
         completed_at=workout.completed_at,
-        sets=[_set_to_out(s) for s in sorted(workout.sets, key=lambda x: (x.exercise_id, x.set_number))],
+        sets=[_set_to_out(s) for s in _sort_sets(workout.sets)],
     )
 
 

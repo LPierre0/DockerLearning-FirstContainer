@@ -6,7 +6,19 @@ from sqlalchemy import text
 from database import engine, Base
 from seed import seed_initial_data
 import models  # noqa: F401 – registers ORM models with Base
-from routers import users, exercises, workouts, sets, progress, boosts, dashboard, body_weight
+from routers import (
+    body_measurements,
+    body_weight,
+    boosts,
+    dashboard,
+    exercises,
+    favorites,
+    insights,
+    progress,
+    sets,
+    users,
+    workouts,
+)
 
 
 def run_migrations():
@@ -27,6 +39,11 @@ def run_migrations():
         existing_users = {row[1] for row in conn.execute(text("PRAGMA table_info(users)"))}
         if "target_weight_kg" not in existing_users:
             conn.execute(text("ALTER TABLE users ADD COLUMN target_weight_kg REAL"))
+
+        # Columns added to exercises after initial schema creation
+        existing_exercises = {row[1] for row in conn.execute(text("PRAGMA table_info(exercises)"))}
+        if "photo_filename" not in existing_exercises:
+            conn.execute(text("ALTER TABLE exercises ADD COLUMN photo_filename TEXT"))
 
         conn.commit()
 
@@ -57,6 +74,9 @@ app.include_router(progress.router)
 app.include_router(boosts.router)
 app.include_router(dashboard.router)
 app.include_router(body_weight.router)
+app.include_router(body_measurements.router)
+app.include_router(favorites.router)
+app.include_router(insights.router)
 
 
 @app.get("/")

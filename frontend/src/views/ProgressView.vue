@@ -13,9 +13,12 @@
           :to="`/progress/${pr.exercise_id}`"
           class="flex items-center justify-between p-4 bg-surface rounded-card border border-apbborder hover:border-primary/50 transition-colors"
         >
-          <div>
-            <div class="font-medium text-apptext text-sm">{{ pr.exercise_name }}</div>
-            <div class="text-xs text-muted">{{ pr.muscle_group }}</div>
+          <div class="flex items-center gap-3 min-w-0">
+            <ExerciseThumb :src="pr.exercise_photo_url" :alt="pr.exercise_name" :size="38" />
+            <div class="min-w-0">
+              <div class="font-medium text-apptext text-sm truncate">{{ pr.exercise_name }}</div>
+              <div class="text-xs text-muted">{{ pr.muscle_group }}</div>
+            </div>
           </div>
           <PRBadge v-if="pr.weight_kg" :weight-kg="pr.weight_kg" :reps="pr.reps ?? 0" />
         </RouterLink>
@@ -37,6 +40,7 @@ import AppLayout from '@/components/layout/AppLayout.vue'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import PRBadge from '@/components/charts/PRBadge.vue'
+import ExerciseThumb from '@/components/ui/ExerciseThumb.vue'
 
 const profileStore = useProfileStore()
 const prs = ref([])

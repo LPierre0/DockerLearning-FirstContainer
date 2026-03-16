@@ -23,6 +23,7 @@ const props = defineProps({
 
 const emit = defineEmits(['skip', 'done'])
 
+let endTime = Date.now() + props.duration * 1000
 const remaining = ref(props.duration)
 let timer = null
 
@@ -32,21 +33,28 @@ const formatted = computed(() => {
   return `${m}:${String(s).padStart(2, '0')}`
 })
 
+function tick() {
+  const r = Math.ceil((endTime - Date.now()) / 1000)
+  remaining.value = Math.max(0, r)
+  if (remaining.value <= 0) {
+    clearInterval(timer)
+    emit('done')
+  }
+}
+
 function adjust(delta) {
-  remaining.value = Math.max(5, remaining.value + delta)
+  endTime += delta * 1000
+  remaining.value = Math.max(5, Math.ceil((endTime - Date.now()) / 1000))
 }
 
 onMounted(() => {
-  timer = setInterval(() => {
-    remaining.value--
-    if (remaining.value <= 0) {
-      clearInterval(timer)
-      emit('done')
-    }
-  }, 1000)
+  tick()
+  timer = setInterval(tick, 500)
+  document.addEventListener('visibilitychange', tick)
 })
 
 onUnmounted(() => {
   clearInterval(timer)
+  document.removeEventListener('visibilitychange', tick)
 })
 </script>

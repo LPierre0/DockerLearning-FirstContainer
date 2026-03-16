@@ -27,6 +27,17 @@
         </button>
       </div>
 
+      <!-- Message post-séance -->
+      <div
+        v-if="justFinished && finishMessage"
+        class="mb-6 p-4 rounded-card border"
+        :class="finishMessage.positive ? 'bg-success/10 border-success/30' : 'bg-primary/10 border-primary/30'"
+      >
+        <p class="text-sm font-medium" :class="finishMessage.positive ? 'text-success' : 'text-primary'">
+          {{ finishMessage.text }}
+        </p>
+      </div>
+
       <!-- Notes -->
       <div v-if="workout.notes" class="mb-6 p-3 rounded-card bg-surface border border-apbborder">
         <p class="text-sm text-muted whitespace-pre-wrap">{{ workout.notes }}</p>
@@ -53,14 +64,17 @@
 
       <!-- Sets grouped by exercise -->
       <div
-        v-for="[exName, sets] in exerciseGroups"
-        :key="exName"
+        v-for="group in exerciseGroups"
+        :key="group.exercise_id"
         class="mb-6"
       >
-        <h2 class="font-semibold text-apptext mb-3">{{ exName }}</h2>
+        <div class="flex items-center gap-3 mb-3">
+          <ExerciseThumb :src="group.photo_url" :alt="group.exercise_name" :size="36" />
+          <h2 class="font-semibold text-apptext">{{ group.exercise_name }}</h2>
+        </div>
         <div class="space-y-2">
           <div
-            v-for="s in sets"
+            v-for="s in group.sets"
             :key="s.id"
             class="flex items-center gap-4 px-4 py-2 rounded-card bg-surface border border-apbborder text-sm"
             :class="{
@@ -79,7 +93,6 @@
               <span class="text-apptext font-medium">{{ s.weight_kg }} kg</span>
               <span class="text-muted">×</span>
               <span class="text-apptext font-medium">{{ s.reps }} reps</span>
-              <span v-if="s.rpe" class="text-xs text-muted">RPE {{ s.rpe }}</span>
             </template>
             <span v-if="s.status === 'done'" class="ml-auto text-success text-base">✓</span>
             <span v-if="s.status === 'failed'" class="ml-auto text-danger text-base">✗</span>
@@ -95,21 +108,32 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
+import ExerciseThumb from '@/components/ui/ExerciseThumb.vue'
 
 const route = useRoute()
 const router = useRouter()
 const workout = ref(null)
 const previousWorkout = ref(null)
 const loading = ref(true)
+const comparisonLoaded = ref(false)
+
+const justFinished = computed(() => route.query.justFinished === 'true')
 
 const exerciseGroups = computed(() => {
-  if (!workout.value) return []
+  if (!workout.value?.sets) return []
   const map = new Map()
   for (const s of workout.value.sets) {
-    if (!map.has(s.exercise_name)) map.set(s.exercise_name, [])
-    map.get(s.exercise_name).push(s)
+    if (!map.has(s.exercise_id)) {
+      map.set(s.exercise_id, {
+        exercise_id: s.exercise_id,
+        exercise_name: s.exercise_name,
+        photo_url: s.exercise_photo_url ?? null,
+        sets: [],
+      })
+    }
+    map.get(s.exercise_id).sets.push(s)
   }
-  return [...map.entries()]
+  return [...map.values()]
 })
 
 function totalVolume(sets) {
@@ -117,7 +141,7 @@ function totalVolume(sets) {
 }
 
 const comparison = computed(() => {
-  if (!workout.value?.completed_at || !previousWorkout.value) return null
+  if (!workout.value?.completed_at || !previousWorkout.value?.sets || !workout.value.sets) return null
   const curVol = totalVolume(workout.value.sets)
   const prevVol = totalVolume(previousWorkout.value.sets)
   const curSets = workout.value.sets.filter(s => s.status === 'done').length
@@ -126,6 +150,31 @@ const comparison = computed(() => {
     deltaVolume: curVol - prevVol,
     deltaSets: curSets - prevSets,
     prevDate: previousWorkout.value.started_at,
+  }
+})
+
+const finishMessage = computed(() => {
+  if (!justFinished.value || !comparisonLoaded.value) return null
+  if (!previousWorkout.value) {
+    return { text: "Premiere seance de ce type, c'est parti !", positive: true }
+  }
+  if (!comparison.value) return null
+  const { deltaVolume, deltaSets } = comparison.value
+  if (deltaVolume > 0) {
+    return {
+      text: `Belle seance ! Tu as souleve +${Math.round(deltaVolume)} kg de plus que la derniere fois.`,
+      positive: true,
+    }
+  }
+  if (deltaSets > 0) {
+    return {
+      text: `Bien joue ! Tu as reussi ${deltaSets} serie${deltaSets > 1 ? 's' : ''} de plus que la derniere fois.`,
+      positive: true,
+    }
+  }
+  return {
+    text: "Bonne seance ! Les stats fluctuent, l'important c'est d'y etre.",
+    positive: false,
   }
 })
 
@@ -156,5 +205,6 @@ onMounted(async () => {
     const prevRes = await fetch(`/api/workouts/${route.params.id}/previous`)
     if (prevRes.ok) previousWorkout.value = await prevRes.json()
   }
+  comparisonLoaded.value = true
 })
 </script>
