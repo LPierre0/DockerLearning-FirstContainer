@@ -7,8 +7,11 @@
 
     <!-- Content area -->
     <main
-      class="pb-20 lg:pb-0 lg:pt-16"
-      :class="{ 'lg:max-w-6xl lg:mx-auto lg:px-6': !fullWidth }"
+      class="lg:pt-16"
+      :class="[
+        mobileNavPadding ? 'pb-20 lg:pb-0' : 'pb-0',
+        !fullWidth ? 'lg:max-w-6xl lg:mx-auto lg:px-6' : '',
+      ]"
     >
       <slot />
     </main>
@@ -28,5 +31,6 @@ import ActiveWorkoutBanner from './ActiveWorkoutBanner.vue'
 
 defineProps({
   fullWidth: { type: Boolean, default: false },
+  mobileNavPadding: { type: Boolean, default: true },
 })
 </script>

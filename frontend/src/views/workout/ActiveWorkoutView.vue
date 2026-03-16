@@ -4,7 +4,7 @@
       <LoadingSpinner size="lg" />
     </div>
 
-    <div v-else-if="workout" class="flex flex-col min-h-dvh">
+    <div v-else-if="workout" class="relative flex flex-col min-h-dvh">
       <!-- Sticky header -->
       <div class="sticky top-0 bg-surface border-b border-apbborder z-40 px-4 py-3 flex items-center justify-between">
         <div>
@@ -35,7 +35,7 @@
       </div>
 
       <!-- Exercise sets -->
-      <div ref="exerciseListEl" class="flex-1 overflow-y-auto overscroll-contain p-4 space-y-4 pb-32">
+      <div class="p-4 space-y-4 pb-32">
         <SetLogger
           v-for="group in exerciseGroups"
           :key="group.exercise.id"
@@ -55,7 +55,7 @@
       <!-- Floating "Add exercise" button -->
       <div class="fixed bottom-24 lg:bottom-8 left-1/2 -translate-x-1/2 z-50">
         <button
-          @click="showSelector = true"
+          @click="openSelector"
           class="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-btn shadow-xl font-semibold text-sm"
         >
           + Exercice
@@ -64,34 +64,28 @@
     </div>
 
     <!-- Exercise selector drawer (mobile) / modal (desktop) -->
-    <Teleport to="body">
-      <Transition name="backdrop">
+    <div
+      v-if="showSelector"
+      class="fixed inset-0 z-[70]"
+    >
+      <div class="absolute inset-0 bg-black/50" @click="closeSelector" @touchmove.prevent />
+      <div class="absolute inset-x-0 bottom-0 top-0 flex items-end lg:inset-0 lg:items-center lg:justify-center">
         <div
-          v-if="showSelector"
-          class="fixed inset-0 z-50 bg-black/50"
-          @click="showSelector = false"
-        />
-      </Transition>
-      <Transition name="sheet">
-        <div
-          v-if="showSelector"
-          class="fixed inset-x-0 bottom-0 z-[51] lg:inset-0 lg:flex lg:items-center lg:justify-center"
+          class="w-full lg:w-[480px] h-[min(78dvh,40rem)] max-h-[calc(100dvh-4.5rem)] lg:h-[600px] bg-surface rounded-t-2xl lg:rounded-card overflow-hidden flex flex-col"
         >
-          <div class="w-full lg:w-[480px] h-3/4 lg:h-[600px] bg-surface rounded-t-2xl lg:rounded-card overflow-hidden flex flex-col">
-            <div class="flex items-center justify-between p-4 border-b border-apbborder">
-              <h2 class="font-semibold text-apptext">Choisir un exercice</h2>
-              <button @click="showSelector = false" class="text-muted hover:text-apptext text-xl">×</button>
-            </div>
-            <ExerciseSelector @select="addExercise" class="flex-1 overflow-hidden" />
+          <div class="flex items-center justify-between p-4 border-b border-apbborder">
+            <h2 class="font-semibold text-apptext">Choisir un exercice</h2>
+            <button @click="closeSelector" class="text-muted hover:text-apptext text-xl">×</button>
           </div>
+          <ExerciseSelector @select="addExercise" class="flex-1 overflow-hidden" />
         </div>
-      </Transition>
-    </Teleport>
+      </div>
+    </div>
   </AppLayout>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useWorkoutStore } from '@/stores/workoutStore'
 import AppLayout from '@/components/layout/AppLayout.vue'
@@ -110,8 +104,6 @@ const loading = ref(true)
 const showSelector = ref(false)
 const finishing = ref(false)
 const notes = ref('')
-const exerciseListEl = ref(null)
-let lockedPageY = 0
 
 function blurActiveElement() {
   if (document.activeElement instanceof HTMLElement) {
@@ -119,25 +111,24 @@ function blurActiveElement() {
   }
 }
 
-function lockBackgroundScroll() {
-  lockedPageY = window.scrollY || 0
-  document.documentElement.style.overflow = 'hidden'
-  document.body.style.position = 'fixed'
-  document.body.style.top = `-${lockedPageY}px`
-  document.body.style.left = '0'
-  document.body.style.right = '0'
-  document.body.style.width = '100%'
+function openSelector() {
+  blurActiveElement()
+  showSelector.value = true
 }
 
-function unlockBackgroundScroll() {
-  if (document.body.style.position !== 'fixed') return
+function closeSelector() {
+  blurActiveElement()
+  showSelector.value = false
+}
+
+function lockPageScroll() {
+  document.documentElement.style.overflow = 'hidden'
+  document.body.style.overflow = 'hidden'
+}
+
+function unlockPageScroll() {
   document.documentElement.style.overflow = ''
-  document.body.style.position = ''
-  document.body.style.top = ''
-  document.body.style.left = ''
-  document.body.style.right = ''
-  document.body.style.width = ''
-  window.scrollTo(0, lockedPageY)
+  document.body.style.overflow = ''
 }
 
 // Groups sets by exercise id; muscle_group comes from the set's exercise_muscle_group
@@ -171,21 +162,18 @@ onMounted(async () => {
 
 watch(showSelector, (open) => {
   if (open) {
-    lockBackgroundScroll()
+    lockPageScroll()
     return
   }
-  unlockBackgroundScroll()
+  unlockPageScroll()
 })
 
 onBeforeUnmount(() => {
-  unlockBackgroundScroll()
+  unlockPageScroll()
 })
 
 async function addExercise(exercise) {
-  const pageY = window.scrollY || 0
-  const listY = exerciseListEl.value?.scrollTop ?? 0
-  blurActiveElement()
-  showSelector.value = false
+  closeSelector()
   const isCardio = exercise.muscle_group === 'Cardio'
   const res = await fetch(`/api/workouts/${workout.value.id}/sets`, {
     method: 'POST',
@@ -199,11 +187,6 @@ async function addExercise(exercise) {
   // exercise_muscle_group comes from the API response now
   if (!workout.value.sets) workout.value.sets = []
   workout.value.sets.push(newSet)
-  await nextTick()
-  if (exerciseListEl.value) {
-    exerciseListEl.value.scrollTop = listY
-  }
-  window.scrollTo(0, pageY)
 }
 
 function removeExerciseFromWorkout(exerciseId) {
